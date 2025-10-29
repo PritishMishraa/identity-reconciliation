@@ -10,9 +10,11 @@
     "db:migrate:remote": "wrangler d1 migrations apply id-rec --remote"
   },
   "dependencies": {
+    "@hono/zod-validator": "^0.7.4",
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.44.7",
-    "hono": "^4.10.3"
+    "hono": "^4.10.3",
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "@types/node": "^24.9.2",
