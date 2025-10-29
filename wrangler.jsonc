@@ -1,6 +1,14 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "identity-reconciliation",
-  "main": "src/index.ts",
-  "compatibility_date": "2025-10-29"
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "identity-reconciliation",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-10-29",
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "id-rec",
+			"database_id": "5c1a9afb-5231-4195-ad57-09d1a0d5ade4",
+			"migrations_dir": "drizzle/migrations"
+		}
+	]
 }
