@@ -1,0 +1,6 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "identity-reconciliation",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-10-29"
+}
