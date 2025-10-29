@@ -8,7 +8,9 @@ import { contacts } from '@/db/schema';
 import { identifyRequestZodSchema, identifyResponseZodSchema } from '@/zod/identify';
 import { reconcilation } from '@/queries/reconciliation';
 
-const app = new Hono<{ Bindings: CloudflareBindings }>()
+const app = new Hono<{ Bindings: CloudflareBindings }>({
+  strict: false
+})
 
 app.use(prettyJSON())
 app.use(logger())
@@ -16,7 +18,7 @@ app.use(logger())
 app.get('/', async (c) => {
   const db = drizzle(c.env.DB);
   const result = await db.select().from(contacts).all();
-  return c.json({ "Total contacts in the database": result.length });
+  return c.json({ "total_contacts": result });
 })
 
 app.post('/identify', zValidator('json', identifyRequestZodSchema), async (c) => {
