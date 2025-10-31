@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Identity Reconciliation Demo</title>
+    <style>
+        :root {
+            color-scheme: dark;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #0b1220;
+            color: #e6edf3;
+        }
+
+        header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #1f2a44;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 22px;
+            font-weight: 600;
+        }
+
+        main {
+            padding: 24px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 24px;
+            align-items: start;
+        }
+
+        @media (max-width: 900px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: #0f172a;
+            border: 1px solid #1f2a44;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 24px 48px rgba(15, 23, 42, 0.45);
+        }
+
+        .card h2 {
+            margin: 0 0 16px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        label {
+            display: block;
+            margin-top: 18px;
+            margin-bottom: 6px;
+            font-size: 14px;
+            color: #9fb1d1;
+            letter-spacing: 0.01em;
+        }
+
+        label:first-of-type {
+            margin-top: 0;
+        }
+
+        input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: 1px solid #2b3a5e;
+            background: #0b1220;
+            color: #e6edf3;
+            font-size: 15px;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.35);
+        }
+
+        input::placeholder {
+            color: #647a9c;
+        }
+
+        button {
+            margin-top: 22px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 18px;
+            font-size: 15px;
+            font-weight: 600;
+            background: #3b82f6;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.2s ease, transform 0.2s ease;
+        }
+
+        button:hover:not(:disabled) {
+            background: #2563eb;
+            transform: translateY(-1px);
+        }
+
+        button:disabled {
+            opacity: 0.65;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        pre {
+            margin: 0;
+            background: #030712;
+            border: 1px solid #1f2a44;
+            border-radius: 10px;
+            padding: 18px;
+            max-height: 480px;
+            overflow: auto;
+            font-size: 14px;
+            line-height: 1.55;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .hint {
+            margin-top: 12px;
+            font-size: 13px;
+            color: #9fb1d1;
+        }
+
+        .hint a {
+            color: #60a5fa;
+            text-decoration: none;
+        }
+
+        .hint a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+    <main>
+        <div class="grid">
+            <section class="card" aria-label="Input form">
+                <h2>Try the API</h2>
+                <label for="email">Email</label>
+                <input id="email" type="email" inputmode="email" placeholder="e.g. doc@hillvalley.edu"
+                    autocomplete="email" />
+                <label for="phone">Phone Number</label>
+                <input id="phone" type="tel" inputmode="tel" placeholder="e.g. 123456" autocomplete="tel" />
+                <button id="submit" type="button">Identify</button>
+                <p class="hint">Provide at least one of email or phone number. View raw data at <a
+                        href="/contacts">/contacts</a>.</p>
+            </section>
+            <section class="card" aria-label="API response">
+                <h2>Response</h2>
+                <pre id="output">Awaiting input…</pre>
+            </section>
+        </div>
+    </main>
+    <script>
+        const $ = (id) => document.getElementById(id);
+        const submit = $('submit');
+        const email = $('email');
+        const phone = $('phone');
+        const output = $('output');
+
+        const setOutput = (message) => {
+            output.textContent = message;
+        };
+
+        const handleSubmit = async () => {
+            const emailValue = email.value.trim();
+            const phoneValue = phone.value.trim();
+
+            if (!emailValue && !phoneValue) {
+                setOutput('Please provide at least one of email or phoneNumber.');
+                return;
+            }
+
+            submit.disabled = true;
+            setOutput('Loading…');
+
+            try {
+                const response = await fetch('/identify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: emailValue || null,
+                        phoneNumber: phoneValue || null
+                    })
+                });
+
+                const text = await response.text();
+
+                if (!response.ok) {
+                    try {
+                        const parsed = JSON.parse(text);
+                        setOutput(JSON.stringify(parsed, null, 2));
+                    } catch (error) {
+                        setOutput('Request failed (' + response.status + '): ' + (text || response.statusText));
+                    }
+                    return;
+                }
+
+                try {
+                    const parsed = JSON.parse(text);
+                    setOutput(JSON.stringify(parsed, null, 2));
+                } catch (_error) {
+                    setOutput(text);
+                }
+            } catch (error) {
+                setOutput('Error: ' + (error instanceof Error ? error.message : String(error)));
+            } finally {
+                submit.disabled = false;
+            }
+        };
+
+        submit.addEventListener('click', handleSubmit);
+
+        [email, phone].forEach((input) => {
+            input.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    handleSubmit();
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>
