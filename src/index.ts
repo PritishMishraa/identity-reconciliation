@@ -7,6 +7,7 @@ import { zValidator } from '@hono/zod-validator'
 import { contacts } from '@/db/schema';
 import { identifyRequestZodSchema, identifyResponseZodSchema } from '@/zod/identify';
 import { reconcilation } from '@/queries/reconciliation';
+import indexHtml from '@/ui/index.html';
 
 const app = new Hono<{ Bindings: CloudflareBindings }>({
   strict: false
@@ -15,7 +16,9 @@ const app = new Hono<{ Bindings: CloudflareBindings }>({
 app.use(prettyJSON())
 app.use(logger())
 
-app.get('/', async (c) => {
+app.get('/', (c) => c.html(indexHtml));
+
+app.get('/contacts', async (c) => {
   const db = drizzle(c.env.DB);
   const result = await db.select().from(contacts).all();
   return c.json({ "total_contacts": result });
@@ -25,7 +28,7 @@ app.post('/identify', zValidator('json', identifyRequestZodSchema), async (c) =>
   const { email, phoneNumber } = c.req.valid('json');
   const db = drizzle(c.env.DB);
 
-  const response = await reconcilation({ db, email, phoneNumber });
+  const response = await reconcilation({ db, email, intPhoneNumber: phoneNumber });
 
   const validatedResponse = identifyResponseZodSchema.parse(response);
 
