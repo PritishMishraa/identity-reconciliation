@@ -8,6 +8,13 @@
       "when": 1761764011226,
       "tag": "0000_volatile_carmella_unuscione",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1761926017545,
+      "tag": "0001_careless_mantis",
+      "breakpoints": true
     }
   ]
 }
