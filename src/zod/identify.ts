@@ -1,10 +1,10 @@
 import { z } from 'zod';
 
 export const identifyRequestZodSchema = z.object({
-    email: z.email().optional(),
-    phoneNumber: z.number().optional()
+    email: z.email().nullable(),
+    phoneNumber: z.number().nullable()
 }).refine(
-    (data) => data.email !== undefined || data.phoneNumber !== undefined,
+    (data) => data.email !== null || data.phoneNumber !== null,
     { message: "At least one of email or phoneNumber must be provided" }
 );
 
