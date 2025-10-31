@@ -1,62 +1,73 @@
 import { contacts } from "@/db/schema";
-import { DrizzleD1Database } from "drizzle-orm/d1";
-import { eq, or } from "drizzle-orm";
+import { ReconciliationParams, ReconciliationResponse } from "@/queries/reconciliation.d";
+import { findMatchingContacts, fetchChain, hasNewInformation, buildResponse, mergeChains } from "@/queries/helpers";
 
-type ReconciliationParams = {
-    db: DrizzleD1Database;
-    email: string | undefined;
-    phoneNumber: number | undefined;
-};
 
-export const reconcilation = async ({ db, email, phoneNumber }: ReconciliationParams) => {
+/**
+ * Reconciliation function
+ * An optimized algorithm that takes at most 3 queries to resolve the reconciliation
+ */
+export const reconcilation = async ({
+    db,
+    email,
+    intPhoneNumber
+}: ReconciliationParams): Promise<ReconciliationResponse> => {
+    // Step 0: Convert phoneNumber to string
+    const phoneNumber = intPhoneNumber ? intPhoneNumber.toString() : undefined;
 
-    // Phase 1: Check if email or phoneNumber exists in the database
-    const existingContacts = await db
-        .select()
-        .from(contacts)
-        .where(
-            or(
-                email ? eq(contacts.email, email) : undefined,
-                phoneNumber ? eq(contacts.phoneNumber, phoneNumber.toString()) : undefined
-            )
-        )
-        .all();
+    // Step 1: Find ALL potentially related contacts (1 query)
+    const matches = await findMatchingContacts(db, email, phoneNumber);
 
-    // If no existing contacts found, create a new primary contact
-    if (existingContacts.length === 0) {
+    // Step 2a: No matches - create new primary contact
+    if (matches.length === 0) {
         const [newContact] = await db
             .insert(contacts)
             .values({
                 email: email || null,
-                phoneNumber: phoneNumber ? phoneNumber.toString() : null,
+                phoneNumber: phoneNumber || null,
                 linkPrecedence: 'primary',
                 linkedId: null
             })
             .returning();
 
-        const result = {
+        return {
             contact: {
                 primaryContatctId: newContact.id,
                 emails: email ? [email] : [],
-                phoneNumbers: phoneNumber ? [phoneNumber.toString()] : [],
+                phoneNumbers: phoneNumber ? [phoneNumber] : [],
                 secondaryContactIds: []
             }
         };
-
-        return result;
     }
 
+    // Step 2b: Resolve to primary contacts (in-memory operation)
+    const primaryIds = new Set<number>();
+    for (const match of matches) {
+        primaryIds.add(match.linkedId ?? match.id);
+    }
 
-    // Placeholder for future phases
-    const result = {
-        contact: {
-            primaryContatctId: 1,
-            emails: email ? [email] : [],
-            phoneNumbers: phoneNumber ? [phoneNumber.toString()] : [],
-            secondaryContactIds: []
+    // Step 3a: Single chain - check if new info needed
+    if (primaryIds.size === 1) {
+        const primaryId = Array.from(primaryIds)[0];
+        const allChainContacts = await fetchChain(db, primaryId);
+
+        if (hasNewInformation(allChainContacts, email, phoneNumber)) {
+            const [newContact] = await db
+                .insert(contacts)
+                .values({
+                    email: email || null,
+                    phoneNumber: phoneNumber || null,
+                    linkPrecedence: 'secondary',
+                    linkedId: primaryId
+                })
+                .returning();
+
+            allChainContacts.push(newContact);
         }
-    };
 
-    return result;
+        return buildResponse(allChainContacts);
+    }
+
+    // Step 3b: Multiple chains - need to merge
+    return mergeChains(db, primaryIds, email, phoneNumber);
 };
-
