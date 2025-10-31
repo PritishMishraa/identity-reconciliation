@@ -12,6 +12,7 @@
     "jsxImportSource": "hono/jsx",
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+    "types": ["@cloudflare/vitest-pool-workers", "vite/client"],
   },
 }
